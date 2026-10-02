@@ -75,3 +75,39 @@ jobs:
             sleep 10
 
             curl -f http://localhost
+
+  deploy-production:
+
+    needs: deploy-staging
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    steps:
+
+      - name: Deploy to Production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+
+          script: |
+
+            docker pull ${{ secrets.DOCKER_USERNAME }}/train-schedule:${{ github.sha }}
+
+            docker stop train-schedule || true
+
+            docker rm train-schedule || true
+
+            docker run -d \
+              --restart always \
+              --name train-schedule \
+              -p 80:3000 \
+              ${{ secrets.DOCKER_USERNAME }}/train-schedule:${{ github.sha }}
+
+            sleep 10
+
+            curl -f http://localhost
